@@ -53,8 +53,11 @@ public class AdminController {
         long pending = evidence.findByStatusOrderByUploadedAtAsc(EvidenceStatus.PENDING).size();
         long approved = evidence.findAll().stream().filter(e -> e.getStatus() == EvidenceStatus.APPROVED).count();
         long rejected = evidence.findAll().stream().filter(e -> e.getStatus() == EvidenceStatus.REJECTED).count();
+        long released = transactions.sumEvidencePoints();
         return Map.of("users", users.count(), "cases", cases.count(), "pendingEvidence", pending,
-            "approvedEvidence", approved, "rejectedEvidence", rejected);
+            "approvedEvidence", approved, "rejectedEvidence", rejected, "totalPointsReleased", released,
+            "pendingRewardRequests", pending, "completedCases", cases.countByStatus(CaseStatus.COMPLETED),
+            "pendingCases", cases.countByStatus(CaseStatus.SUBMITTED) + cases.countByStatus(CaseStatus.UNDER_REVIEW));
     }
 
     @GetMapping("/dashboard")

@@ -6,10 +6,14 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.beans.factory.annotation.Value;
 import java.util.Locale;
 
 @Configuration
 public class SeedData {
+    @Value("${app.admin.email:jabilimutukuru@gmail.com}") private String adminEmail;
+    @Value("${app.admin.password:jabilimutukuru}") private String adminPassword;
+
     @Bean CommandLineRunner seed(SchemeRepository schemes, UserRepository users, PasswordEncoder encoder) {
         return args -> {
             if (schemes.count() == 0) {
@@ -20,10 +24,10 @@ public class SeedData {
                 s = new Scheme(); s.setName("National Scholarship Portal"); s.setCategory("Education"); s.setProvider("Government of India");
                 s.setDescription("Discover and apply for scholarships across departments."); s.setEligibility("Eligibility varies by scholarship and education level."); s.setOfficialUrl("https://scholarships.gov.in"); schemes.save(s);
             }
-            User admin = users.findByEmailIgnoreCase("jabilimutukuru@gmail.com").orElseGet(User::new);
-            admin.setEmail("jabilimutukuru@gmail.com".toLowerCase(Locale.ROOT));
+            User admin = users.findByEmailIgnoreCase(adminEmail).orElseGet(User::new);
+            admin.setEmail(adminEmail.toLowerCase(Locale.ROOT));
             admin.setFullName("Jabili Mutukuru");
-            admin.setPassword(encoder.encode("jabilimutukuru"));
+            admin.setPassword(encoder.encode(adminPassword));
             admin.setRole(Role.ADMIN);
             users.save(admin);
         };

@@ -1,2 +1,2 @@
 package in.hopebridge.model;
-public enum Role { USER, ADMIN }
+public enum Role { USER, VOLUNTEER, NGO, ADMIN }
