@@ -29,12 +29,22 @@ CREATE TABLE IF NOT EXISTS evidence (
   id BIGINT AUTO_INCREMENT PRIMARY KEY, case_file_id BIGINT NOT NULL, file_name VARCHAR(180) NOT NULL,
   content_type VARCHAR(100) NOT NULL, size_bytes BIGINT NOT NULL, content LONGBLOB NOT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'PENDING', review_note TEXT,
-  uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (case_file_id) REFERENCES cases(id) ON DELETE CASCADE
+  requested_points INT NOT NULL DEFAULT 0, approved_points INT NULL, reviewed_by BIGINT NULL,
+  reviewed_at TIMESTAMP NULL, uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (case_file_id) REFERENCES cases(id) ON DELETE CASCADE,
+  FOREIGN KEY (reviewed_by) REFERENCES users(id)
 );
 CREATE TABLE IF NOT EXISTS reward_transactions (
   id BIGINT AUTO_INCREMENT PRIMARY KEY, user_id BIGINT NOT NULL, points INT NOT NULL,
-  reason VARCHAR(180) NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id)
+  reason VARCHAR(180) NOT NULL, type VARCHAR(30) NOT NULL DEFAULT 'EVIDENCE_APPROVED',
+  admin_id BIGINT NULL, case_file_id BIGINT NULL, evidence_id BIGINT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id), FOREIGN KEY (admin_id) REFERENCES users(id),
+  FOREIGN KEY (case_file_id) REFERENCES cases(id), FOREIGN KEY (evidence_id) REFERENCES evidence(id)
+);
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY, admin_id BIGINT NOT NULL, action VARCHAR(80) NOT NULL,
+  entity_type VARCHAR(80) NOT NULL, entity_id BIGINT NOT NULL, user_id BIGINT NULL, points INT NULL, remarks TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (admin_id) REFERENCES users(id)
 );
 
 -- The API seed runner creates this account with a BCrypt password at startup:

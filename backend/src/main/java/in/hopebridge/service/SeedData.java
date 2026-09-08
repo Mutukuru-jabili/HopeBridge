@@ -6,6 +6,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import java.util.Locale;
 
 @Configuration
 public class SeedData {
@@ -19,9 +20,12 @@ public class SeedData {
                 s = new Scheme(); s.setName("National Scholarship Portal"); s.setCategory("Education"); s.setProvider("Government of India");
                 s.setDescription("Discover and apply for scholarships across departments."); s.setEligibility("Eligibility varies by scholarship and education level."); s.setOfficialUrl("https://scholarships.gov.in"); schemes.save(s);
             }
-            if (users.count() == 0) {
-                User admin = new User(); admin.setEmail("admin@hopebridge.in"); admin.setFullName("HopeBridge Admin"); admin.setPassword(encoder.encode("Admin@12345")); admin.setRole(Role.ADMIN); users.save(admin);
-            }
+            User admin = users.findByEmailIgnoreCase("jabilimutukuru@gmail.com").orElseGet(User::new);
+            admin.setEmail("jabilimutukuru@gmail.com".toLowerCase(Locale.ROOT));
+            admin.setFullName("Jabili Mutukuru");
+            admin.setPassword(encoder.encode("jabilimutukuru"));
+            admin.setRole(Role.ADMIN);
+            users.save(admin);
         };
     }
 }

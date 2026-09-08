@@ -1,89 +1,162 @@
 package in.hopebridge.web;
+
 import in.hopebridge.model.*;
 import in.hopebridge.repository.*;
-import in.hopebridge.service.WalletService;
-import in.hopebridge.service.CurrentUser;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
+import in.hopebridge.service.*;
+import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
 import java.util.*;
 
-@RestController @RequestMapping("/api/admin") @PreAuthorize("hasRole('ADMIN')")
+@RestController
+@RequestMapping("/api/admin")
+@PreAuthorize("hasRole('ADMIN')")
 @Transactional
 public class AdminController {
- private final CaseRepository cases; private final EvidenceRepository evidence; private final SchemeRepository schemes;
- private final UserRepository users; private final WalletService wallet; private final CurrentUser current;
- public AdminController(CaseRepository c,EvidenceRepository e,SchemeRepository s,UserRepository users,WalletService w,CurrentUser current){
-  cases=c; evidence=e; schemes=s; this.users=users; wallet=w; this.current=current;
- }
- @GetMapping("/cases") List<Map<String,Object>> cases(){
-  return cases.findAllByOrderByUpdatedAtDesc().stream().map(c->{
-   Map<String,Object> m=new HashMap<>(); m.put("id",c.getId()); m.put("title",c.getTitle());
-   m.put("category",c.getCategory()); m.put("status",c.getStatus().name());
-   m.put("applicant",c.getApplicant().getFullName()); m.put("email",c.getApplicant().getEmail());
-   m.put("updatedAt",c.getUpdatedAt());
-   m.put("assignedReviewer", c.getAssignedReviewer() == null ? null : reviewerView(c.getAssignedReviewer()));
-   return m;
-  }).toList();
- }
- @GetMapping("/reviewers") List<Map<String,Object>> reviewers(){
-  return users.findByRoleOrderByFullNameAsc(Role.ADMIN).stream().map(this::reviewerView).toList();
- }
- @PatchMapping("/cases/{id}/assign")
- Map<String,Object> assign(@PathVariable Long id,@RequestParam Long reviewerId,Authentication authentication){
-  CaseFile c=cases.findById(id).orElseThrow();
-  User reviewer=users.findById(reviewerId).orElseThrow();
-  if(reviewer.getRole()!=Role.ADMIN) throw new IllegalArgumentException("Cases can only be assigned to an admin reviewer.");
-  if(c.getApplicant().getId().equals(reviewer.getId())) throw new IllegalArgumentException("An applicant cannot review their own case.");
-  c.setAssignedReviewer(reviewer);
-  if(c.getStatus()==CaseStatus.SUBMITTED || c.getStatus()==CaseStatus.ACTION_REQUIRED) c.setStatus(CaseStatus.UNDER_REVIEW);
-  c.setUpdatedAt(Instant.now());
-  cases.save(c);
-  return Map.of("id",c.getId(),"status",c.getStatus().name(),"assignedReviewer",reviewerView(reviewer));
- }
- @DeleteMapping("/cases/{id}/assign")
- Map<String,Object> unassign(@PathVariable Long id){
-  CaseFile c=cases.findById(id).orElseThrow(); c.setAssignedReviewer(null); c.setUpdatedAt(Instant.now()); cases.save(c);
-  return Map.of("id",c.getId(),"status",c.getStatus().name(),"assignedReviewer","");
- }
- @PatchMapping("/cases/{id}")
- Map<String,Object> review(@PathVariable Long id,@RequestParam CaseStatus status,
-   @RequestParam(required=false,defaultValue="") String note,Authentication authentication){
-  CaseFile c=cases.findById(id).orElseThrow(); User reviewer=current.get(authentication);
-  if(c.getApplicant().getId().equals(reviewer.getId())) throw new IllegalArgumentException("Self-review is not permitted.");
-  if(c.getAssignedReviewer()!=null && !c.getAssignedReviewer().getId().equals(reviewer.getId()))
-   throw new ResponseStatusException(HttpStatus.FORBIDDEN,"This case is assigned to another reviewer.");
-  if(status==CaseStatus.APPROVED && (c.getAssignedReviewer()==null || !c.getAssignedReviewer().getId().equals(reviewer.getId())))
-   throw new IllegalArgumentException("Approval requires an assigned independent reviewer.");
-  c.setStatus(status); c.setAdminNote(note); c.setUpdatedAt(Instant.now());
-  return Map.of("id",cases.save(c).getId(),"status",c.getStatus().name(),"message","Review decision recorded.");
- }
- @GetMapping("/evidence") List<Map<String,Object>> evidence(){
-  return this.evidence.findAll().stream().map(this::evidenceView).toList();
- }
- @GetMapping("/cases/{caseId}/evidence") List<Map<String,Object>> caseEvidence(@PathVariable Long caseId){
-  CaseFile c=cases.findById(caseId).orElseThrow();
-  return evidence.findByCaseFileOrderByUploadedAtDesc(c).stream().map(this::evidenceView).toList();
- }
- @PatchMapping("/evidence/{id}")
- Map<String,Object> evidenceReview(@PathVariable Long id,@RequestParam EvidenceStatus status,
-   @RequestParam(required=false,defaultValue="") String note,Authentication authentication){
-  Evidence e=evidence.findById(id).orElseThrow(); CaseFile c=e.getCaseFile(); User reviewer=current.get(authentication);
-  if(c.getAssignedReviewer()!=null && !c.getAssignedReviewer().getId().equals(reviewer.getId()))
-   throw new ResponseStatusException(HttpStatus.FORBIDDEN,"This case is assigned to another reviewer.");
-  EvidenceStatus previous=e.getStatus(); e.setStatus(status); e.setReviewNote(note); evidence.save(e);
-  if(status==EvidenceStatus.VERIFIED && previous!=EvidenceStatus.VERIFIED) wallet.award(c.getApplicant(),5,"Evidence verified");
-  return Map.of("id",e.getId(),"status",e.getStatus().name());
- }
- @PostMapping("/schemes") Scheme addScheme(@RequestBody Scheme scheme){scheme.setId(null);return schemes.save(scheme);}
- private Map<String,Object> reviewerView(User u){return Map.of("id",u.getId(),"fullName",u.getFullName(),"email",u.getEmail(),"role",u.getRole().name());}
- private Map<String,Object> evidenceView(Evidence e){
-  return Map.of("id",e.getId(),"caseId",e.getCaseFile().getId(),"fileName",e.getFileName(),
-    "contentType",e.getContentType(),"sizeBytes",e.getSizeBytes(),"status",e.getStatus().name(),
-    "reviewNote",e.getReviewNote()==null?"":e.getReviewNote(),"uploadedAt",e.getUploadedAt());
- }
+    private final CaseRepository cases;
+    private final EvidenceRepository evidence;
+    private final SchemeRepository schemes;
+    private final UserRepository users;
+    private final WalletService wallet;
+    private final CurrentUser current;
+    private final AuditLogRepository audit;
+    private final RewardTransactionRepository transactions;
+
+    public AdminController(CaseRepository cases, EvidenceRepository evidence, SchemeRepository schemes,
+        UserRepository users, WalletService wallet, CurrentUser current, AuditLogRepository audit,
+        RewardTransactionRepository transactions) {
+        this.cases = cases; this.evidence = evidence; this.schemes = schemes; this.users = users;
+        this.wallet = wallet; this.current = current; this.audit = audit; this.transactions = transactions;
+    }
+
+    @GetMapping("/cases")
+    List<Map<String,Object>> cases() {
+        return cases.findAllByOrderByUpdatedAtDesc().stream().map(c -> {
+            Map<String,Object> m = new HashMap<>();
+            m.put("id", c.getId()); m.put("title", c.getTitle()); m.put("category", c.getCategory());
+            m.put("status", c.getStatus().name()); m.put("applicant", c.getApplicant().getFullName());
+            m.put("email", c.getApplicant().getEmail()); m.put("updatedAt", c.getUpdatedAt());
+            return m;
+        }).toList();
+    }
+
+    @GetMapping("/evidence/pending")
+    List<Map<String,Object>> pendingEvidence() {
+        return evidence.findByStatusOrderByUploadedAtAsc(EvidenceStatus.PENDING).stream().map(this::evidenceView).toList();
+    }
+
+    @GetMapping("/overview")
+    Map<String,Object> overview() {
+        long pending = evidence.findByStatusOrderByUploadedAtAsc(EvidenceStatus.PENDING).size();
+        long approved = evidence.findAll().stream().filter(e -> e.getStatus() == EvidenceStatus.APPROVED).count();
+        long rejected = evidence.findAll().stream().filter(e -> e.getStatus() == EvidenceStatus.REJECTED).count();
+        return Map.of("users", users.count(), "cases", cases.count(), "pendingEvidence", pending,
+            "approvedEvidence", approved, "rejectedEvidence", rejected);
+    }
+
+    @GetMapping("/dashboard")
+    Map<String,Object> dashboard() { return overview(); }
+
+    @GetMapping("/evidence")
+    List<Map<String,Object>> allEvidence() {
+        return evidence.findAll().stream().map(this::evidenceView).toList();
+    }
+
+    @GetMapping("/evidence/{id}")
+    Map<String,Object> evidence(@PathVariable Long id) {
+        return evidenceView(evidence.findById(id).orElseThrow());
+    }
+
+    @PutMapping("/evidence/{id}/approve")
+    Map<String,Object> approve(@PathVariable Long id, @RequestBody ApproveRequest request, Authentication authentication) {
+        Evidence item = evidence.findById(id).orElseThrow();
+        if (item.getStatus() != EvidenceStatus.PENDING) throw new IllegalStateException("Only pending evidence can be approved.");
+        User admin = current.get(authentication);
+        if (item.getCaseFile().getApplicant().getId().equals(admin.getId())) throw new IllegalArgumentException("Users cannot approve their own evidence.");
+        int points = request.approvedPoints() == null ? item.getRequestedPoints() : request.approvedPoints();
+        if (points <= 0 || points > 10000) throw new IllegalArgumentException("Approved points must be between 1 and 10,000.");
+        item.setStatus(EvidenceStatus.APPROVED); item.setApprovedPoints(points);
+        item.setReviewNote(request.remarks()); item.setReviewedBy(admin); item.setReviewedAt(Instant.now());
+        evidence.save(item);
+        wallet.award(item.getCaseFile().getApplicant(), points, "Evidence approved: " + item.getFileName(),
+            admin, item.getCaseFile(), item, "EVIDENCE_APPROVED");
+        log(admin, "APPROVE_EVIDENCE", "EVIDENCE", id, item.getCaseFile().getApplicant().getId(), points, request.remarks());
+        return evidenceView(item);
+    }
+
+    @PutMapping("/evidence/{id}/reject")
+    Map<String,Object> reject(@PathVariable Long id, @RequestBody RejectRequest request, Authentication authentication) {
+        Evidence item = evidence.findById(id).orElseThrow();
+        if (item.getStatus() != EvidenceStatus.PENDING) throw new IllegalStateException("Only pending evidence can be rejected.");
+        if (request.reason() == null || request.reason().isBlank()) throw new IllegalArgumentException("A rejection reason is required.");
+        User admin = current.get(authentication);
+        item.setStatus(EvidenceStatus.REJECTED); item.setReviewNote(request.reason());
+        item.setReviewedBy(admin); item.setReviewedAt(Instant.now()); evidence.save(item);
+        log(admin, "REJECT_EVIDENCE", "EVIDENCE", id, item.getCaseFile().getApplicant().getId(), null, request.reason());
+        return evidenceView(item);
+    }
+
+    @GetMapping("/rewards")
+    List<Map<String,Object>> rewards() {
+        return transactions.findAll().stream().sorted(Comparator.comparing(RewardTransaction::getCreatedAt).reversed())
+            .map(t -> {
+                Map<String,Object> m = new HashMap<>();
+                m.put("id", t.getId()); m.put("userId", t.getUser().getId()); m.put("user", t.getUser().getFullName());
+                m.put("evidenceId", t.getEvidence() == null ? null : t.getEvidence().getId());
+                m.put("points", t.getPoints()); m.put("reason", t.getReason()); m.put("type", t.getType());
+                m.put("createdAt", t.getCreatedAt()); return m;
+            }).toList();
+    }
+
+    @PutMapping("/rewards/{userId}/adjust")
+    Map<String,Object> adjust(@PathVariable Long userId, @RequestBody AdjustRequest request, Authentication authentication) {
+        if (request.points() == 0) throw new IllegalArgumentException("Adjustment cannot be zero.");
+        if (request.reason() == null || request.reason().isBlank()) throw new IllegalArgumentException("A reason is required.");
+        User admin = current.get(authentication);
+        User user = users.findById(userId).orElseThrow();
+        wallet.adjust(user, request.points(), request.reason(), admin);
+        log(admin, "ADJUST_REWARD", "USER", userId, userId, request.points(), request.reason());
+        return Map.of("userId", userId, "balance", wallet.wallet(user).getBalance());
+    }
+
+    @GetMapping("/users")
+    List<Map<String,Object>> users() {
+        return users.findAll().stream().map(u -> {
+            Map<String,Object> m = new HashMap<>();
+            m.put("id", u.getId()); m.put("fullName", u.getFullName());
+            m.put("email", u.getEmail()); m.put("role", u.getRole().name()); return m;
+        }).toList();
+    }
+
+    @PostMapping("/schemes")
+    Scheme addScheme(@RequestBody Scheme scheme) { scheme.setId(null); return schemes.save(scheme); }
+
+    public record ApproveRequest(Integer approvedPoints, String remarks) {}
+    public record RejectRequest(String reason) {}
+    public record AdjustRequest(int points, String reason) {}
+
+    private void log(User admin, String action, String type, Long id, String remarks) {
+        log(admin, action, type, id, null, null, remarks);
+    }
+    private void log(User admin, String action, String type, Long id, Long userId, Integer points, String remarks) {
+        AuditLog entry = new AuditLog(); entry.setAdmin(admin); entry.setAction(action);
+        entry.setEntityType(type); entry.setEntityId(id); entry.setUserId(userId); entry.setPoints(points);
+        entry.setRemarks(remarks); audit.save(entry);
+    }
+
+    private Map<String,Object> evidenceView(Evidence e) {
+        Map<String,Object> m = new HashMap<>();
+        m.put("id", e.getId()); m.put("caseId", e.getCaseFile().getId());
+        m.put("caseTitle", e.getCaseFile().getTitle()); m.put("userId", e.getCaseFile().getApplicant().getId());
+        m.put("user", e.getCaseFile().getApplicant().getFullName()); m.put("email", e.getCaseFile().getApplicant().getEmail());
+        m.put("description", e.getCaseFile().getDescription()); m.put("fileName", e.getFileName());
+        m.put("contentType", e.getContentType()); m.put("status", e.getStatus().name());
+        m.put("requestedPoints", e.getRequestedPoints()); m.put("approvedPoints", e.getApprovedPoints());
+        m.put("reviewNote", e.getReviewNote() == null ? "" : e.getReviewNote());
+        m.put("uploadedAt", e.getUploadedAt()); m.put("reviewedAt", e.getReviewedAt());
+        return m;
+    }
 }

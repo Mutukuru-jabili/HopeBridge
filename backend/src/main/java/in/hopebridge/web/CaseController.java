@@ -46,9 +46,11 @@ public class CaseController {
         result.put("createdAt",c.getCreatedAt()); result.put("updatedAt",c.getUpdatedAt());
         result.put("assignedReviewer",c.getAssignedReviewer()==null?"":Map.of(
                 "id",c.getAssignedReviewer().getId(),"fullName",c.getAssignedReviewer().getFullName()));
-        result.put("evidence",c.getEvidence().stream().map(e->Map.of("id",e.getId(),"fileName",e.getFileName(),
-                "contentType",e.getContentType(),"sizeBytes",e.getSizeBytes(),"status",e.getStatus().name(),
-                "reviewNote",e.getReviewNote()==null?"":e.getReviewNote())).toList());
+        result.put("evidence",c.getEvidence().stream().map(e->{Map<String,Object> m=new LinkedHashMap<>();
+                m.put("id",e.getId());m.put("fileName",e.getFileName());m.put("contentType",e.getContentType());
+                m.put("sizeBytes",e.getSizeBytes());m.put("status",e.getStatus().name());
+                m.put("requestedPoints",e.getRequestedPoints());m.put("approvedPoints",e.getApprovedPoints());
+                m.put("reviewNote",e.getReviewNote()==null?"":e.getReviewNote());m.put("reviewedAt",e.getReviewedAt());return m;}).toList());
         return result;
     }
     private boolean isAdmin(Authentication a) {

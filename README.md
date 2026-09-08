@@ -46,7 +46,7 @@ GRANT ALL PRIVILEGES ON hopebridge.* TO 'hopebridge'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
-The API is available at `http://localhost:8081/api` by default. Port 8080 is commonly occupied by Jenkins or another local service; set `SERVER_PORT=8080` if it is available. A development admin is seeded on an empty database: `admin@hopebridge.in` / `Admin@12345`. Change this before any real deployment.
+The API is available at `http://localhost:8081/api` by default. Port 8080 is commonly occupied by Jenkins or another local service; set `SERVER_PORT=8080` if it is available. The development admin account is `jabilimutukuru@gmail.com` / `jabilimutukuru`. Change this before any real deployment.
 
 ### Web
 

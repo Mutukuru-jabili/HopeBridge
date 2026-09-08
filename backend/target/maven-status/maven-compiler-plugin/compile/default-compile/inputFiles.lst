@@ -1,4 +1,5 @@
 D:\HopeBridge\backend\src\main\java\in\hopebridge\HopeBridgeApplication.java
+D:\HopeBridge\backend\src\main\java\in\hopebridge\model\AuditLog.java
 D:\HopeBridge\backend\src\main\java\in\hopebridge\model\CaseFile.java
 D:\HopeBridge\backend\src\main\java\in\hopebridge\model\CaseStatus.java
 D:\HopeBridge\backend\src\main\java\in\hopebridge\model\Evidence.java
@@ -8,6 +9,7 @@ D:\HopeBridge\backend\src\main\java\in\hopebridge\model\Role.java
 D:\HopeBridge\backend\src\main\java\in\hopebridge\model\Scheme.java
 D:\HopeBridge\backend\src\main\java\in\hopebridge\model\User.java
 D:\HopeBridge\backend\src\main\java\in\hopebridge\model\Wallet.java
+D:\HopeBridge\backend\src\main\java\in\hopebridge\repository\AuditLogRepository.java
 D:\HopeBridge\backend\src\main\java\in\hopebridge\repository\CaseRepository.java
 D:\HopeBridge\backend\src\main\java\in\hopebridge\repository\EvidenceRepository.java
 D:\HopeBridge\backend\src\main\java\in\hopebridge\repository\RewardTransactionRepository.java

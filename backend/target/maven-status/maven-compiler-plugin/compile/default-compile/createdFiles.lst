@@ -1,11 +1,15 @@
 in\hopebridge\model\Role.class
+in\hopebridge\repository\AuditLogRepository.class
 in\hopebridge\model\Wallet.class
+in\hopebridge\web\AdminController$RejectRequest.class
 in\hopebridge\model\Evidence.class
 in\hopebridge\web\AuthController$Register.class
 in\hopebridge\web\EvidenceController.class
 in\hopebridge\security\CustomUserDetailsService.class
 in\hopebridge\web\AdminController.class
+in\hopebridge\model\AuditLog.class
 in\hopebridge\repository\WalletRepository.class
+in\hopebridge\web\AdminController$ApproveRequest.class
 in\hopebridge\web\UserController$ProfileUpdate.class
 in\hopebridge\model\CaseFile.class
 in\hopebridge\repository\RewardTransactionRepository.class
@@ -23,6 +27,7 @@ in\hopebridge\security\SecurityConfig.class
 in\hopebridge\security\JwtService.class
 in\hopebridge\web\WalletController.class
 in\hopebridge\model\User.class
+in\hopebridge\web\AdminController$AdjustRequest.class
 in\hopebridge\web\AuthController.class
 in\hopebridge\model\EvidenceStatus.class
 in\hopebridge\service\SeedData.class

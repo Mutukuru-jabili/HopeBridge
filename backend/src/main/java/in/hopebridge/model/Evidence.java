@@ -18,11 +18,17 @@ public class Evidence {
     private String contentType;
     @Column(nullable = false)
     private long sizeBytes;
-    @Lob @Basic(fetch = FetchType.LAZY)
+    @Lob @Basic(fetch = FetchType.LAZY) @Column(columnDefinition = "LONGBLOB")
     private byte[] content;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20)
     private EvidenceStatus status = EvidenceStatus.PENDING;
     @Column(columnDefinition = "TEXT")
     private String reviewNote;
+    @Column(nullable = false)
+    private int requestedPoints = 0;
+    private Integer approvedPoints;
+    @ManyToOne(fetch = FetchType.LAZY)
+    private User reviewedBy;
+    private Instant reviewedAt;
     private Instant uploadedAt = Instant.now();
 }
